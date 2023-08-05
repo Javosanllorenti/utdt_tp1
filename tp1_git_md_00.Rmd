@@ -1,0 +1,42 @@
+---
+title: "tp1_git_md"
+author: "Javi Sanllo"
+date: "2023-08-05"
+output: html_document
+---
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(sf)
+library(ggmap)  #mapas base
+library(dplyr)
+library(lubridate)
+
+```
+
+
+
+```{r}
+op_caba_00 <- read.csv("https://cdn.buenosaires.gob.ar/datosabiertos/datasets/secretaria-general-y-relaciones-internacionales/ba-obras/observatorio-de-obras-urbanas.csv",
+                          stringsAsFactors = TRUE,
+                          encoding="UTF-8")
+
+summary(op_caba_00)
+
+```
+
+```{r}
+colnames(op_caba_00)
+```
+```{r}
+op_caba_00<-op_caba_00 %>%   
+  select(-contains("imagen"),-starts_with("link"),-contains("contr"),-beneficiarios,-c(28:36))
+
+colnames(op_caba_00)
+```
+```{r}
+
+
+
+```
+
