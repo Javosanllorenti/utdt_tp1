@@ -11,32 +11,151 @@ library(sf)
 library(ggmap)  #mapas base
 library(dplyr)
 library(lubridate)
+library(janitor)
 
 ```
 
-
+###¿QUE BARRIOS HAN TENIDO LAS MAYOR CANTIDAD DE OBRAS CON PRESUPUESTO SIGNIFICATIVO Y CUAL ES LA EMPRESA CONSTRUCTORA BENEFICIARIA CON MAS PRESENCIA EN CADA UNO? Se asumen valores a precios constantes
 
 ```{r}
 op_caba_00 <- read.csv("https://cdn.buenosaires.gob.ar/datosabiertos/datasets/secretaria-general-y-relaciones-internacionales/ba-obras/observatorio-de-obras-urbanas.csv",
                           stringsAsFactors = TRUE,
                           encoding="UTF-8")
 
-summary(op_caba_00)
-
 ```
 
 ```{r}
+clean_names(op_caba_00)
 colnames(op_caba_00)
 ```
 ```{r}
 op_caba_00<-op_caba_00 %>%   
-  select(-contains("imagen"),-starts_with("link"),-contains("contr"),-beneficiarios,-c(28:36))
+  select(-contains("imagen"),-starts_with("link"),-contains("contr"),monto_contrato,-beneficiarios,-c(28:36))
 
 colnames(op_caba_00)
+str(op_caba_00)
 ```
+
+##ANALISIS Y DEFINICION DE CONCEPTO "OBRA SIGNIFICATIVA"- Se utiliza como base el criterio presupuestario 
+
 ```{r}
 
+op_caba_00$monto_contrato <- as.numeric(as.character(op_caba_00$monto_contrato))
+
+op_caba_00<-op_caba_00 %>%   
+  filter(monto_contrato!="is.na")
+
+summary(op_caba_00$monto_contrato)
+
+top_20_presupuestos <- head(sort(op_caba_00$monto_contrato, decreasing = TRUE), 20)
+print(top_20_presupuestos)
+```
+```{r}
+presupuestos_00<-op_caba_00 %>%
+                summarise(min=min(monto_contrato,na.rm = TRUE), #na.rm para que calcule a pesar de NA
+                          max=max(monto_contrato,na.rm = TRUE),
+                          media=mean(monto_contrato,na.rm = TRUE),
+                          mediana=median(monto_contrato,na.rm = TRUE),
+                          desvio=sd(monto_contrato,na.rm = TRUE), #standar deviation, promedio de las diferencias respecto a la media
+                          cv=desvio/media*100) #coeficiente de variacion: datos es homogéneo si es menor o igual a 30%
+
+print(presupuestos_00)
+```
+## DADA LA HETEROGENEIDAD DE LOS DATOS NOS CONCENTRAMOS EN LA MEDIANA COMO PARAMETRO PARA DEFINIR "OBRAS SIGNIFICATIVAS"
+
+```{r}
+op_caba_00<-op_caba_00 %>% 
+      mutate(nivel_presup=case_when(monto_contrato>=0          & monto_contrato<=10000000        ~"presup_bajo",    
+                                    monto_contrato>10000000    & monto_contrato<=100000000       ~"presup_medio",
+                                    monto_contrato>100000000   & monto_contrato<=500000000       ~"presup_alto",
+                                    monto_contrato >500000000                                    ~"presup_máximo"    )) 
+
+
+table(op_caba_00$nivel_presup)
+prop.table(table(op_caba_00$nivel_presup))
+```
+
+
+
+
+```{r}
+unique(op_caba_00$barrio)
+```
+```{r}
+op_caba_barrios <- op_caba_00 %>% 
+  filter(nivel_presup != "presup_bajo") %>% 
+  group_by(barrio) %>% 
+  summarise(cant_obras = n(),
+            presup = sum(monto_contrato),
+            ppal_beneficiario = names(which.max(table(licitacion_oferta_empresa)))) %>% 
+mutate(presup_enmill=presup/1000000)
 
 
 ```
 
+
+
+
+```{r fig.height=10}
+
+op_caba_barrios_top20 <- op_caba_barrios %>%
+  top_n(20, presup)
+
+
+ggplot(data =op_caba_barrios_top20,              
+       mapping = aes(x = reorder(barrio, presup),         
+                     y=presup_enmill), position=position_dodge()) + 
+geom_bar(fill = "#2A5783",          
+         colour = "black", 
+         alpha=0.7,
+         width=1,
+         stat = "identity") + 
+coord_flip() +
+labs(title = "Barrios con mayor inversión en obra pública",
+     subtitle = "Sobre presupuestos ejecutados por encima de la media\n\n",
+     x = "Barrios",
+     y = "\nPresupuesto en Obras en millones de pesos constantes\n",
+     caption ="\nFuente:https://data.buenosaires.gob.ar/dataset/ba-obras/resource/76f48b4f-577c-45dc-9228-d08520fbbec4",
+     fill = "") +
+geom_text(aes(label = cant_obras),color="white", size=7,vjust = 0.5, hjust = 1) +     
+theme_minimal()+
+theme( text = element_text(size = 20))
+
+
+```
+
+
+```{r}
+op_caba_barrios_top20 <- op_caba_barrios %>%
+  top_n(20, presup)
+
+
+ggplot(data =op_caba_barrios_top20,              
+       mapping = aes(x = reorder(barrio, presup),         
+                     y=presup_enmill), position=position_dodge()) + 
+geom_bar(fill = "#2A5783",          
+         colour = "black", 
+         alpha=0.7,
+         width=1,
+         stat = "identity") + 
+coord_flip() +
+labs(title = "Barrios con mayor inversión en obra pública",
+     subtitle = "Sobre presupuestos ejecutados por encima de la media",
+     x = "Barrios",
+     y = "Presupuesto en Obras en millones de pesos constantes",
+     caption ="\n\nFuente:https://data.buenosaires.gob.ar/dataset/ba-obras/resource/76f48b4f-577c-45dc-9228-d08520fbbec4",
+     fill = "") +
+geom_text(aes(label = cant_obras),color="white", size=7,vjust = 0.5, hjust = 1) +     
+theme_minimal()+
+theme(
+  text = element_text(size = 12),        
+  axis.title = element_text(size = 14),  
+  plot.title = element_text(size = 16),  
+  legend.text = element_text(size = 10))
+
+
+
+```
+
+
+ 
