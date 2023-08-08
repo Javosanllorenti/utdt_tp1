@@ -85,7 +85,7 @@ presupuestos_00<-op_caba_00 %>%
 print(presupuestos_00)
 ```
 
-## DADA LA HETEROGENEIDAD DE LOS DATOS NOS CONCENTRAMOS EN LA MEDIANA COMO PARAMETRO PARA DEFINIR "OBRAS SIGNIFICATIVAS"
+# DADA LA HETEROGENEIDAD DE LOS DATOS NOS CONCENTRAMOS EN LA MEDIANA COMO PARAMETRO PARA DEFINIR "OBRAS SIGNIFICATIVAS"
 
 ```{r}
 op_caba_00<-op_caba_00 %>% 
@@ -161,36 +161,4 @@ theme( text = element_text(size = 17),
 
 ```
 
-#se anula: Prueba de dimensiones de grafico sin depender de "{r fig.height=10}"- mayor control
 
-```{r eval=FALSE, include=FALSE}
-op_caba_barrios_top20 <- op_caba_barrios %>%
-  top_n(20, presup)
-
-
-ggplot(data =op_caba_barrios_top20,              
-       mapping = aes(x = reorder(barrio, presup),         
-                     y=presup_enmill), position=position_dodge()) + 
-geom_bar(fill = "#873600",          
-         colour = "black", 
-         alpha=0.7,
-         width=1,
-         stat = "identity") + 
-coord_flip() +
-labs(title = "Barrios con mayor inversión en obra pública",
-     subtitle = "Sobre presupuestos ejecutados por encima de la media",
-     x = "Barrios",
-     y = "Presupuesto en Obras en millones de pesos constantes",
-     caption ="\n\nFuente:https://data.buenosaires.gob.ar/dataset/ba-obras/resource/76f48b4f-577c-45dc-9228-d08520fbbec4",
-     fill = "") +
-geom_text(aes(label = cant_obras),color="white", size=3,vjust = 0.5, hjust = 1) +     
-theme_minimal()+
-theme(
-  text = element_text(size = 10),        
-  axis.title = element_text(size = 10),  
-  plot.title = element_text(size = 16),  
-  legend.text = element_text(size = 12))
-
-
-
-```
